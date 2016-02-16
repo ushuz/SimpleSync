@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import fnmatch
 import os
 import shlex
 import subprocess
@@ -36,11 +37,20 @@ class SimpleSyncCommand(sublime_plugin.EventListener):
         local = self.settings.get("local")
         remote = self.settings.get("remote")
 
+        # Construct full local and remote path
         local_path = view.file_name()
         if not local_path or not local_path.startswith(local):
             return
         remote_path = remote + local_path.replace(local, "")
 
+        # Ignore the file that matches any excluded patterns
+        patterns = self.settings.get("excludes", [])
+        for p in patterns:
+            _p = "{}*".format(p) if p.startswith("/") else "*{}*".format(p)
+            if fnmatch.fnmatch(local_path, _p):
+                return
+
+        # Extend PATH to execute commands outside default system PATH
         path = self.settings.get("path", "")
         path = ":".join((os.path.expanduser(path), os.environ.get("PATH")))
         print("{}: PATH".format(PACKAGE_NAME), path)

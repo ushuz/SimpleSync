@@ -14,6 +14,9 @@
     "rsync -avz {local} remote2:{remote}",
   ],
 
+  // Exclude files that match below patterns
+  "excludes": [],
+
   // Specify command execution timeout, defaults to 10.
   "timeout": 10,
 }
