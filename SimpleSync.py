@@ -34,34 +34,41 @@ class SimpleSyncCommand(sublime_plugin.EventListener):
         if not view:
             return
 
-        local = self.settings.get("local")
-        remote = self.settings.get("remote")
+        projects = self.settings.get("projects", [])
 
-        # Construct full local and remote path
-        local_path = view.file_name()
-        if not local_path or not local_path.startswith(local):
-            return
-        remote_path = remote + local_path.replace(local, "")
+        for project in projects:
 
-        # Ignore the file that matches any excluded patterns
-        patterns = self.settings.get("excludes", [])
-        for p in patterns:
-            _p = "{}*".format(p) if p.startswith("/") else "*{}*".format(p)
-            if fnmatch.fnmatch(local_path, _p):
-                return
+            local = project.get("local")
+            remote = project.get("remote")
 
-        # Extend PATH to execute commands outside default system PATH
-        path = self.settings.get("path", "")
-        path = ":".join((os.path.expanduser(path), os.environ.get("PATH")))
-        print("{}: PATH".format(PACKAGE_NAME), path)
+            if not local or not remote:
+                continue
 
-        timeout = self.settings.get("timeout", 10)
+            # Construct full local and remote path
+            local_path = view.file_name()
+            if not local_path or not local_path.startswith(local):
+                continue
+            remote_path = remote + local_path.replace(local, "")
 
-        commands = self.settings.get("commands")
-        for cmd in commands:
-            cmd = cmd.format(local=local_path, remote=remote_path)
-            print("{}: EXEC".format(PACKAGE_NAME), cmd)
-            Command(cmd).run(timeout, env=dict(PATH=path))
+            # Ignore the file that matches any excluded patterns
+            patterns = project.get("excludes", [])
+            for p in patterns:
+                _p = "{}*".format(p) if p.startswith("/") else "*{}*".format(p)
+                if fnmatch.fnmatch(local_path, _p):
+                    continue
+
+            # Extend PATH to execute commands outside default system PATH
+            path = project.get("path", "")
+            path = ":".join((os.path.expanduser(path), os.environ.get("PATH")))
+            print("{}: PATH".format(PACKAGE_NAME), path)
+
+            timeout = project.get("timeout", 10)
+
+            commands = project.get("commands", [])
+            for cmd in commands:
+                cmd = cmd.format(local=local_path, remote=remote_path)
+                print("{}: EXEC".format(PACKAGE_NAME), cmd)
+                Command(cmd).run(timeout, env=dict(PATH=path))
 
 
 class Command(object):
