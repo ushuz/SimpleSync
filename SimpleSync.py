@@ -55,7 +55,7 @@ class SimpleSyncCommand(sublime_plugin.EventListener):
             for p in patterns:
                 _p = "{}*".format(p) if p.startswith("/") else "*{}*".format(p)
                 if fnmatch.fnmatch(local_path, _p):
-                    continue
+                    return
 
             # Extend PATH to execute commands outside default system PATH
             path = project.get("path", "")
