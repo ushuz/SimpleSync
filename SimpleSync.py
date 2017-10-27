@@ -77,12 +77,18 @@ class Command(object):
         thread = threading.Thread(target=target)
         thread.start()
 
-        ThreadProgress(thread, PACKAGE_NAME, "{} Completed".format(PACKAGE_NAME))
+        ThreadProgress(thread, PACKAGE_NAME,
+                       success_message="{} Completed".format(PACKAGE_NAME),
+                       failure_message="{} Failed".format(PACKAGE_NAME))
 
         thread.join(timeout)
         if thread.is_alive():
             print("{}: Timedout".format(PACKAGE_NAME))
             self.terminate()
+
+        thread.ok = self.process.returncode == 0
+
+        return self.process.returncode
 
     def terminate(self):
         return os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
@@ -99,24 +105,23 @@ class ThreadProgress(object):
         The message to display next to the activity indicator
 
     :param success_message:
-        The message to display once the thread is complete
+        The message to display once the thread is completed
     """
 
-    def __init__(self, thread, message, success_message):
+    def __init__(self, thread, message, success_message="Completed", failure_message="Failed"):
         self.thread = thread
         self.message = message
         self.success_message = success_message
+        self.failure_message = failure_message
         self.addend = 1
         self.size = 8
         sublime.set_timeout(lambda: self.run(0), 100)
 
     def run(self, i):
         if not self.thread.is_alive():
-            if hasattr(self.thread, "result") and not self.thread.result:
-                sublime.status_message("")
-                return
-            sublime.status_message(self.success_message)
-            return
+            if hasattr(self.thread, "ok") and not self.thread.ok:
+                return sublime.status_message(self.failure_message)
+            return sublime.status_message(self.success_message)
 
         before = i % self.size
         after = (self.size - 1) - before
