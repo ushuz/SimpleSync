@@ -3,6 +3,7 @@
 import fnmatch
 import os
 import shlex
+import signal
 import subprocess
 import threading
 
@@ -60,18 +61,18 @@ class SimpleSyncCommand(sublime_plugin.EventListener):
             # Extend PATH to execute commands outside default system PATH
             path = project.get("path", "")
             path = ":".join((os.path.expanduser(path), os.environ.get("PATH")))
-            print("{}: PATH".format(PACKAGE_NAME), path)
 
             timeout = project.get("timeout", 10)
 
             commands = project.get("commands", [])
             for cmd in commands:
                 cmd = cmd.format(local=local_path, remote=remote_path)
-                print("{}: EXEC".format(PACKAGE_NAME), cmd)
+                print("{}: Execute:".format(PACKAGE_NAME), cmd)
                 Command(cmd).run(timeout, env=dict(PATH=path))
 
 
 class Command(object):
+
     def __init__(self, cmd):
         self.cmd = shlex.split(cmd)
         self.process = None
@@ -80,30 +81,22 @@ class Command(object):
         def target():
             self.process = subprocess.Popen(
                 self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                env=env)
+                env=env, preexec_fn=os.setsid)
             stdout, stderr = self.process.communicate()
-            print('%s:' % PACKAGE_NAME, stdout)
+            print("{}: Output:".format(PACKAGE_NAME), stdout, stderr)
 
         thread = threading.Thread(target=target)
         thread.start()
-        ThreadProgress(thread, PACKAGE_NAME, "%s Completed" % PACKAGE_NAME)
+
+        ThreadProgress(thread, PACKAGE_NAME, "{} Completed".format(PACKAGE_NAME))
 
         thread.join(timeout)
         if thread.is_alive():
-            print('%s:' % PACKAGE_NAME, 'Timedout')
-            self.process.terminate() # kill proc
-            self.process.kill()
-            thread.join()
+            print("{}: Timedout".format(PACKAGE_NAME))
+            self.terminate()
 
-        def show_msg(msg):
-            find_msg = msg.lower()
-            if find_msg.find('100%') != -1:
-                self.success = True
-            else:
-                if msg:
-                    sublime.message_dialog(msg)
-                else:
-                    self.success = False
+    def terminate(self):
+        return os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
 
 
 class ThreadProgress(object):
