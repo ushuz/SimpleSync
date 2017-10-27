@@ -34,23 +34,24 @@ class SimpleSyncCommand(sublime_plugin.EventListener):
             if not local or not remote:
                 continue
 
-            # Construct full local and remote path
+            # build full local and remote path
             local_path = view.file_name()
             if not local_path or not local_path.startswith(local):
                 continue
             remote_path = remote + local_path.replace(local, "")
 
-            # Ignore the file that matches any excluded patterns
+            # ignore the file if it matches any exclusion patterns
             patterns = project.get("excludes", [])
             for p in patterns:
                 _p = "{}*".format(p) if p.startswith("/") else "*{}*".format(p)
                 if fnmatch.fnmatch(local_path, _p):
                     return
 
-            # Extend PATH to execute commands outside default system PATH
+            # extend PATH to execute commands outside default system PATH
             path = project.get("path", "")
-            path = ":".join((os.path.expanduser(path), os.environ.get("PATH")))
+            path = os.pathsep.join((os.path.expanduser(path), os.environ.get("PATH", "")))
 
+            # 10s timeout by default
             timeout = project.get("timeout", 10)
 
             commands = project.get("commands", [])
@@ -67,12 +68,14 @@ class Command(object):
         self.process = None
 
     def run(self, timeout=10, env=None):
+
         def target():
             self.process = subprocess.Popen(
-                self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 env=env, preexec_fn=os.setsid)
             stdout, stderr = self.process.communicate()
-            print("{}: Output:".format(PACKAGE_NAME), stdout, stderr)
+            print("{}: Retcode: {} STDOUT: {} STDERR: {}"
+                    .format(PACKAGE_NAME, self.process.returncode, stdout, stderr))
 
         thread = threading.Thread(target=target)
         thread.start()
