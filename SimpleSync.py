@@ -15,17 +15,6 @@ PACKAGE_NAME = "SimpleSync"
 PACKAGE_SETTINGS = PACKAGE_NAME + ".sublime-settings"
 
 
-class SyncCommand(object):
-
-    def sync_paste_path(self):
-        file_path = ''
-        def on_done(file_path):
-            # print(file_path)
-            if not file_path: return
-            self.sync_file(file_path)
-        self.window.show_input_panel('[%s] Copy and paste local file path :' % (PACKAGE_NAME), file_path, on_done, None, None)
-
-
 class SimpleSyncCommand(sublime_plugin.EventListener):
     @property
     def settings(self):
