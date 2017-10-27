@@ -2,6 +2,7 @@
 
 import fnmatch
 import os
+import re
 import shlex
 import signal
 import subprocess
@@ -34,11 +35,16 @@ class SimpleSyncCommand(sublime_plugin.EventListener):
             if not local or not remote:
                 continue
 
-            # build full local and remote path
+            # build full local / remote paths
             local_path = view.file_name()
             if not local_path or not local_path.startswith(local):
                 continue
-            remote_path = remote + local_path.replace(local, "")
+            remote_path = re.sub('^{}'.format(local), remote, local_path)
+
+            # hack for rsync
+            # By removing basename part from remote_path, rsync can automatically the parent directory
+            # if it's not yet existed. However, it won't work if the hierarchy is too deep.
+            remote_path = re.sub('/{}$'.format(os.path.basename(remote_path)), '/', remote_path)
 
             # ignore the file if it matches any exclusion patterns
             patterns = project.get("excludes", [])
