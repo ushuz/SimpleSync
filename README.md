@@ -7,8 +7,8 @@ A basic Sublime Text 3 plugin that listens to `save` event and [r]sync the file 
 Clone this repo into `Packages` folder:
 
 ```bash
-cd [...]/Sublime Text 3/Data/Packages
-git clone https://github.com/ushuz/SimpleSync.git
+cd "$HOME/Library/Application Support/Sublime Text 3/Packages"  # macos
+git clone --depth 1 https://github.com/ushuz/SimpleSync.git
 ```
 
 ## Settings
